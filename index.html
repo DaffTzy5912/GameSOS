@@ -6,9 +6,8 @@
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
         button { padding: 10px; margin: 5px; font-size: 18px; }
-        #room-section, #game-board { display: none; }
-        .board { display: grid; grid-template-columns: repeat(3, 60px); grid-gap: 5px; margin: 20px auto; width: 200px; }
-        .cell { width: 60px; height: 60px; font-size: 24px; text-align: center; border: 1px solid #000; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(3, 100px); grid-gap: 5px; justify-content: center; }
+        .cell { width: 100px; height: 100px; font-size: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid black; cursor: pointer; }
         .error { color: red; }
     </style>
 </head>
@@ -20,20 +19,23 @@
     <p id="error-message" class="error"></p>
 </div>
 
-<div id="room-section">
+<div id="room-section" style="display:none;">
     <h3 id="room-id"></h3>
-    <p id="player-id"></p>
-    <div class="board" id="game-board"></div>
+    <p id="player-name"></p>
+    <div class="grid" id="game-board"></div>
     <p id="status">Menunggu pemain lain...</p>
     <p id="result"></p>
 </div>
 
 <script>
     let roomId = "";
-    let playerId = Math.random().toString(36).substring(7); 
-    const API_URL = "https://game-sos.vercel.app/api";
+    let playerName = "";
+    const API_URL = "https://uji-coba-ke2.vercel.app/api"; // Ganti ke backend Vercel
 
     async function createRoom() {
+        let name = prompt("Masukkan nama Anda:");
+        if (!name) return;
+        playerName = name;
         let res = await fetch(`${API_URL}/create-room`);
         let data = await res.json();
         roomId = data.roomId;
@@ -41,6 +43,9 @@
     }
 
     async function joinRoom() {
+        let name = prompt("Masukkan nama Anda:");
+        if (!name) return;
+        playerName = name;
         roomId = document.getElementById("room-code").value;
         if (!roomId) return alert("Masukkan kode room!");
         updateUI();
@@ -48,43 +53,41 @@
 
     function updateUI() {
         document.getElementById("room-id").innerText = "Room: " + roomId;
-        document.getElementById("player-id").innerText = "Player ID: " + playerId;
+        document.getElementById("player-name").innerText = "Nama: " + playerName;
         document.getElementById("create-room").style.display = "none";
         document.getElementById("room-section").style.display = "block";
-        createBoard();
+        generateBoard();
     }
 
-    function createBoard() {
+    function generateBoard() {
         let board = document.getElementById("game-board");
         board.innerHTML = "";
         for (let i = 0; i < 9; i++) {
             let cell = document.createElement("div");
-            cell.className = "cell";
-            cell.setAttribute("data-index", i);
+            cell.classList.add("cell");
+            cell.dataset.index = i;
             cell.onclick = () => makeMove(i);
             board.appendChild(cell);
         }
-        board.style.display = "grid";
     }
 
     async function makeMove(index) {
-        let res = await fetch(`${API_URL}/play?roomId=${roomId}&playerId=${playerId}&index=${index}`);
+        let res = await fetch(`${API_URL}/make-move?roomId=${roomId}&playerName=${playerName}&index=${index}`);
         let data = await res.json();
         if (data.error) {
             alert(data.error);
-        } else {
-            updateBoard(data.board);
-            document.getElementById("status").innerText = data.status;
-            if (data.result) {
-                document.getElementById("result").innerText = data.result;
-            }
+            return;
+        }
+        updateBoard(data.board);
+        if (data.result) {
+            document.getElementById("result").innerText = data.result;
         }
     }
 
     function updateBoard(board) {
         let cells = document.querySelectorAll(".cell");
-        board.forEach((val, i) => {
-            cells[i].innerText = val;
+        board.forEach((value, i) => {
+            cells[i].innerText = value;
         });
     }
 </script>
