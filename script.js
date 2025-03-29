@@ -1,18 +1,17 @@
 const API_URL = "https://game-sos.vercel.app/api";
-
 let roomId = null;
 let playerSymbol = null;
 let isMyTurn = false;
 
 // Buat room baru
 async function createRoom() {
-    const res = await fetch(`${API_URL}/create-room`);
+    const res = await fetch(`${API_URL}?action=create-room`);
     const data = await res.json();
     roomId = data.roomId;
     playerSymbol = "⭕";
     isMyTurn = true;
 
-    document.getElementById("status").innerText = `Room ID: ${roomId} (Menunggu lawan...)`;
+    document.getElementById("status").innerText = `Room ID: ${roomId} (Tunggu pemain lain)`;
 }
 
 // Gabung ke room yang ada
@@ -20,17 +19,17 @@ async function joinRoom() {
     const inputRoomId = document.getElementById("roomIdInput").value;
     if (!inputRoomId) return alert("Masukkan Room ID!");
 
-    roomId = inputRoomId;
-    playerSymbol = "❌";
-    isMyTurn = false;
-
-    const res = await fetch(`${API_URL}/join-room?roomId=${roomId}`);
+    const res = await fetch(`${API_URL}?action=join-room&roomId=${inputRoomId}`);
     const data = await res.json();
-    
+
     if (data.error) {
         alert(data.error);
     } else {
-        document.getElementById("status").innerText = `Bergabung ke Room ${roomId}. Tunggu giliran Anda!`;
+        roomId = data.roomId;
+        playerSymbol = data.playerSymbol;
+        isMyTurn = playerSymbol === "⭕";
+        document.getElementById("status").innerText = `Gabung ke Room ${roomId}. Anda bermain sebagai ${playerSymbol}`;
+        checkGameStatus();
     }
 }
 
@@ -41,14 +40,15 @@ async function makeMove(index) {
         return;
     }
 
-    const res = await fetch(`${API_URL}/play?roomId=${roomId}&player=${playerSymbol}&index=${index}`);
+    const res = await fetch(`${API_URL}?action=play&roomId=${roomId}&index=${index}`);
     const data = await res.json();
 
     if (data.error) {
         alert(data.error);
     } else {
         updateBoard(data.board);
-        isMyTurn = false;
+        isMyTurn = data.nextTurn === playerSymbol;
+        document.getElementById("status").innerText = isMyTurn ? "Giliran Anda!" : "Menunggu lawan...";
         checkGameStatus();
     }
 }
@@ -57,9 +57,9 @@ async function makeMove(index) {
 function updateBoard(board) {
     board.forEach((cell, index) => {
         const cellElement = document.getElementById(`cell-${index}`);
-        if (cellElement) {
+        if (cellElement && !cellElement.textContent) {
             cellElement.textContent = cell || "";
-            cellElement.classList.add("taken"); // Mencegah perubahan setelah diisi
+            cellElement.classList.add("taken");
         }
     });
 }
@@ -68,25 +68,12 @@ function updateBoard(board) {
 async function checkGameStatus() {
     if (!roomId) return;
 
-    const res = await fetch(`${API_URL}/check-result?roomId=${roomId}`);
+    const res = await fetch(`${API_URL}?action=check-result&roomId=${roomId}`);
     const data = await res.json();
 
-    if (data.result) {
-        alert(data.result);
-        resetGame();
-    } else {
-        isMyTurn = true;
-        document.getElementById("status").innerText = "Giliran Anda!";
-    }
+    updateBoard(data.board);
+    isMyTurn = data.turn === playerSymbol;
+    document.getElementById("status").innerText = isMyTurn ? "Giliran Anda!" : "Menunggu lawan...";
 
     setTimeout(checkGameStatus, 3000);
-}
-
-// Reset game setelah selesai
-function resetGame() {
-    document.querySelectorAll(".cell").forEach(cell => {
-        cell.textContent = "";
-        cell.classList.remove("taken");
-    });
-    document.getElementById("status").innerText = "Game selesai. Mulai lagi!";
 }
