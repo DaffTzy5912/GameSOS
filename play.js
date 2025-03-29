@@ -3,6 +3,8 @@ const rooms = {}; // Menyimpan status room
 export default function handler(req, res) {
     const { roomId, player, index } = req.query;
 
+    console.log(`Request diterima: roomId=${roomId}, player=${player}, index=${index}`);
+
     if (!roomId || !player || index === undefined) {
         return res.json({ error: "Invalid request" });
     }
@@ -35,6 +37,7 @@ export default function handler(req, res) {
 
     // Simpan tanda (⭕ atau ❌) dalam board
     room.board[index] = room.currentPlayer;
+    console.log(`Board setelah move:`, room.board); // Debugging
 
     // Ganti giliran pemain
     room.currentPlayer = room.currentPlayer === "⭕" ? "❌" : "⭕";
