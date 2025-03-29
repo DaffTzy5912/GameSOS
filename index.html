@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Online</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        button { padding: 10px; margin: 5px; font-size: 18px; }
+        #room-section, #game-board { display: none; }
+        .board { display: grid; grid-template-columns: repeat(3, 60px); grid-gap: 5px; margin: 20px auto; width: 200px; }
+        .cell { width: 60px; height: 60px; font-size: 24px; text-align: center; border: 1px solid #000; cursor: pointer; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h2>Game SOS Online</h2><div id="create-room">
+    <button onclick="createRoom()">Buat Room</button>
+    <input type="text" id="room-code" placeholder="Masukkan kode room">
+    <button onclick="joinRoom()">Masuk Room</button>
+    <p id="error-message" class="error"></p>
+</div>
+
+<div id="room-section">
+    <h3 id="room-id"></h3>
+    <p id="player-id"></p>
+    <div class="board" id="game-board"></div>
+    <p id="status">Menunggu pemain lain...</p>
+    <p id="result"></p>
+</div>
+
+<script>
+    let roomId = "";
+    let playerId = Math.random().toString(36).substring(7); 
+    const API_URL = "https://uji-coba-ke2.vercel.app/api";
+
+    async function createRoom() {
+        let res = await fetch(`${API_URL}/create-room`);
+        let data = await res.json();
+        roomId = data.roomId;
+        updateUI();
+    }
+
+    async function joinRoom() {
+        roomId = document.getElementById("room-code").value;
+        if (!roomId) return alert("Masukkan kode room!");
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById("room-id").innerText = "Room: " + roomId;
+        document.getElementById("player-id").innerText = "Player ID: " + playerId;
+        document.getElementById("create-room").style.display = "none";
+        document.getElementById("room-section").style.display = "block";
+        createBoard();
+    }
+
+    function createBoard() {
+        let board = document.getElementById("game-board");
+        board.innerHTML = "";
+        for (let i = 0; i < 9; i++) {
+            let cell = document.createElement("div");
+            cell.className = "cell";
+            cell.setAttribute("data-index", i);
+            cell.onclick = () => makeMove(i);
+            board.appendChild(cell);
+        }
+        board.style.display = "grid";
+    }
+
+    async function makeMove(index) {
+        let res = await fetch(`${API_URL}/play?roomId=${roomId}&playerId=${playerId}&index=${index}`);
+        let data = await res.json();
+        if (data.error) {
+            alert(data.error);
+        } else {
+            updateBoard(data.board);
+            document.getElementById("status").innerText = data.status;
+            if (data.result) {
+                document.getElementById("result").innerText = data.result;
+            }
+        }
+    }
+
+    function updateBoard(board) {
+        let cells = document.querySelectorAll(".cell");
+        board.forEach((val, i) => {
+            cells[i].innerText = val;
+        });
+    }
+</script>
+
+</body>
+</html>
