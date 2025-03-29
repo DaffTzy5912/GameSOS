@@ -1,55 +1,43 @@
-const rooms = {};
+const rooms = {}; // Menyimpan status room
 
 export default function handler(req, res) {
-    const { roomId, player, choice } = req.query;
+    const { roomId, player, index } = req.query;
 
-    if (!roomId || !player || !choice) {
+    if (!roomId || !player || index === undefined) {
         return res.json({ error: "Invalid request" });
     }
 
-    // Cek apakah pilihan valid
-    const choices = ["rock", "paper", "scissors"];
-    if (!choices.includes(choice)) {
-        return res.json({ error: "Pilihan tidak valid" });
-    }
-
-    // Simpan pilihan pemain dalam room
+    // Buat room jika belum ada
     if (!rooms[roomId]) {
-        rooms[roomId] = {};
-    }
-    rooms[roomId][player] = choice;
-
-    console.log(`Room ${roomId}:`, rooms[roomId]); // Debugging log
-
-    // Cek apakah dua pemain sudah memilih
-    const players = Object.keys(rooms[roomId]);
-    if (players.length < 2) {
-        return res.json({ status: "Menunggu pemain lain..." });
+        rooms[roomId] = {
+            board: Array(9).fill(null),
+            currentPlayer: "⭕",
+            players: []
+        };
     }
 
-    // Ambil pilihan kedua pemain
-    const [player1, player2] = players;
-    const choice1 = rooms[roomId][player1];
-    const choice2 = rooms[roomId][player2];
+    const room = rooms[roomId];
 
-    console.log(`Player1 (${player1}): ${choice1}, Player2 (${player2}): ${choice2}`); // Debugging log
-
-    // Tentukan pemenang
-    let result = "";
-    if (choice1 === choice2) {
-        result = "Seri!";
-    } else if (
-        (choice1 === "rock" && choice2 === "scissors") ||
-        (choice1 === "scissors" && choice2 === "paper") ||
-        (choice1 === "paper" && choice2 === "rock")
-    ) {
-        result = `${player1} menang!`;
-    } else {
-        result = `${player2} menang!`;
+    // Tambahkan pemain jika belum ada
+    if (!room.players.includes(player) && room.players.length < 2) {
+        room.players.push(player);
     }
 
-    // Simpan hasil agar bisa dicek
-    rooms[roomId].result = result;
+    // Pastikan kotak belum diisi
+    if (room.board[index] !== null) {
+        return res.json({ error: "Kotak sudah diisi" });
+    }
 
-    res.json({ result });
+    // Pastikan pemain bermain secara bergantian
+    if (room.players.length === 2 && player !== room.players[room.players.indexOf(room.currentPlayer)]) {
+        return res.json({ error: "Bukan giliran Anda" });
+    }
+
+    // Simpan tanda (⭕ atau ❌) dalam board
+    room.board[index] = room.currentPlayer;
+
+    // Ganti giliran pemain
+    room.currentPlayer = room.currentPlayer === "⭕" ? "❌" : "⭕";
+
+    return res.json({ board: room.board, currentPlayer: room.currentPlayer });
 }
